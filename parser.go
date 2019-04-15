@@ -10,15 +10,14 @@ import (
 )
 
 type Parser interface {
-	GetFlats(req *FlatsRequest) []Flat
 	getURL(req *FlatsRequest, page int) string
-	parsePage(url string, flatsChan chan []Flat)
+	parsePage(url *string, flatsChan chan []Flat)
 }
 
 type ParserCian struct{}
 
 func (parser *ParserCian) getURL(req *FlatsRequest, page int) string {
-	url := "https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat"
+	url := "https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&type=4"
 	url += "&region=" + sc.FormatUint(uint64(req.City), 10)
 	url += "&p=" + sc.FormatInt(int64(page), 10)
 	if req.FromOwner {
@@ -39,8 +38,11 @@ func (parser *ParserCian) getURL(req *FlatsRequest, page int) string {
 	return url
 }
 
-func (parser *ParserCian) parsePage(url string, flatsChan chan []Flat) {
-	resp, err := http.Get(url)
+func (parser *ParserCian) parsePage(url *string, flatsChan chan []Flat) {
+	resp, err := http.Get(*url)
+	flats := make([]Flat, 0)
+	defer func() { flatsChan <- flats }()
+
 	if err != nil {
 		return
 	}
@@ -60,7 +62,6 @@ func (parser *ParserCian) parsePage(url string, flatsChan chan []Flat) {
 		}
 	})
 
-	flats := make([]Flat, 0)
 	doc.Find(".main").Each(func(i int, s *goquery.Selection) {
 		flat := Flat{}
 		url, _ := s.Find("a").Attr("href")
@@ -78,10 +79,9 @@ func (parser *ParserCian) parsePage(url string, flatsChan chan []Flat) {
 		if len(values) < 2 {
 			title = findAndFilter(".subtitle", "[^0-9 ]")
 			values = strings.Fields(title)
-		}
-
-		if len(values) < 2 {
-			return
+			if len(values) < 2 {
+				return
+			}
 		}
 
 		flat.Rooms = uint8(ParseUintOrDefault(values[0]))
@@ -97,20 +97,18 @@ func (parser *ParserCian) parsePage(url string, flatsChan chan []Flat) {
 		}
 		flats = append(flats, flat)
 	})
-	flatsChan <- flats
 }
 
-func (parser *ParserCian) GetFlats(req *FlatsRequest, maxPage int) ([]Flat, error) {
+func GetFlats(parser Parser, req *FlatsRequest, maxPage int) []Flat {
 	flatsChan := make(chan []Flat)
 	flats := make([]Flat, 0)
 	defer close(flatsChan)
 	for i := 1; i <= maxPage; i++ {
 		url := parser.getURL(req, i)
-		go parser.parsePage(url, flatsChan)
+		go parser.parsePage(&url, flatsChan)
 	}
 	for i := 1; i <= maxPage; i++ {
 		flats = append(flats, <-flatsChan...)
 	}
-
-	return flats, nil
+	return flats
 }

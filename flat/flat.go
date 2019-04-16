@@ -1,4 +1,4 @@
-package rentit
+package flat
 
 const (
 	MOSCOW uint8 = 1
@@ -14,13 +14,4 @@ type Flat struct {
 	Price     uint64
 	Area      uint64
 	FromOwner bool
-}
-
-type FlatsRequest struct {
-	City       uint8
-	Rooms      []uint8
-	MinPrice   uint64
-	MaxPrice   uint64
-	LastUpdate uint64
-	FromOwner  bool
 }

@@ -1,4 +1,4 @@
-package rentit
+package parser
 
 import "strconv"
 

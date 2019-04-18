@@ -20,36 +20,35 @@ func GetCoordinates(address *string) (latitude float64, longitude float64, err e
 
 	res, err := http.Get(hereURL.String())
 	if err != nil {
-		return 0, 0, err
+		return
 	}
 	defer res.Body.Close()
 
 	bodyBytes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return 0, 0, err
+		return
 	}
 
 	result := geocode{}
-	if err := json.Unmarshal(bodyBytes, &result); err != nil {
-		return 0, 0, err
+	err = json.Unmarshal(bodyBytes, &result)
+	if err != nil {
+		return
 	}
 
-	wrongAddressError := errors.New("Wrong address")
-
+	err = errors.New("Wrong address")
 	view := &result.Response.View
 	if len(*view) == 0 {
-		return 0, 0, wrongAddressError
+		return
 	}
-
 	viewResult := &(*view)[0].Result
 	if len(*viewResult) == 0 {
-		return 0, 0, wrongAddressError
+		return
 	}
-
 	navigationPosition := &(*viewResult)[0].Location.NavigationPosition
 	if len(*navigationPosition) == 0 {
-		return 0, 0, wrongAddressError
+		return
 	}
+	err = nil
 
 	latitude = (*navigationPosition)[0].Latitude
 	longitude = (*navigationPosition)[0].Longitude

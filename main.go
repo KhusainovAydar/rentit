@@ -8,9 +8,17 @@ import (
 )
 
 func main() {
-	request := parser.FlatsRequest{
+	cianParser := &parser.ParserCian{}
+	flatsRequest := parser.FlatsRequest{
 		City: flat.MOSCOW,
 	}
-	flats := request.GetFlats(&parser.ParserCian{}, 1)
-	fmt.Println(flats)
+	flats := flatsRequest.GetFlats(cianParser, 1)
+	for i := range flats {
+		err := flats[i].FillCoordinates()
+		if err != nil {
+			fmt.Printf("ERROR %s\n", err.Error())
+		} else {
+			fmt.Println(flats[i])
+		}
+	}
 }

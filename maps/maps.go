@@ -11,7 +11,7 @@ import (
 	"github.com/the-fusy/rentit/config"
 )
 
-func parseFromHere(URL *string, params *url.Values, result interface{}) (err error) {
+func parseFromHere(URL *string, params *url.Values, result interface{}) error {
 	hereURL, _ := url.Parse(*URL)
 	params.Set("app_id", config.HereAppID)
 	params.Set("app_code", config.HereAppCode)
@@ -20,21 +20,21 @@ func parseFromHere(URL *string, params *url.Values, result interface{}) (err err
 
 	res, err := http.Get(hereURL.String())
 	if err != nil {
-		return
+		return err
 	}
 	defer res.Body.Close()
 
 	bodyBytes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = json.Unmarshal(bodyBytes, result)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return err
 }
 
 func GetCoordinates(address *string) (latitude float64, longitude float64, err error) {
@@ -46,24 +46,24 @@ func GetCoordinates(address *string) (latitude float64, longitude float64, err e
 
 	err = parseFromHere(&hereURL, &params, &result)
 	if err != nil {
-		return
+		return 0, 0, err
 	}
 
 	err = errors.New("Error to get coordinates")
 
 	view := &result.Response.View
 	if len(*view) == 0 {
-		return
+		return 0, 0, err
 	}
 
 	viewResult := &(*view)[0].Result
 	if len(*viewResult) == 0 {
-		return
+		return 0, 0, err
 	}
 
 	navigationPosition := &(*viewResult)[0].Location.NavigationPosition
 	if len(*navigationPosition) == 0 {
-		return
+		return 0, 0, err
 	}
 
 	latitude = (*navigationPosition)[0].Latitude
@@ -72,7 +72,7 @@ func GetCoordinates(address *string) (latitude float64, longitude float64, err e
 		err = nil
 	}
 
-	return
+	return latitude, longitude, err
 }
 
 type geocode struct {
@@ -90,7 +90,7 @@ type geocode struct {
 	}
 }
 
-func GetTravelTime(from, to Place) (travelTime int16, err error) {
+func GetTravelTime(from, to Place) (int16, error) {
 	hereURL := "https://route.api.here.com/routing/7.2/calculateroute.json"
 	params := url.Values{
 		"mode":           []string{"fastest;publicTransport"},
@@ -100,24 +100,24 @@ func GetTravelTime(from, to Place) (travelTime int16, err error) {
 	}
 	result := calculateroute{}
 
-	err = parseFromHere(&hereURL, &params, &result)
+	err := parseFromHere(&hereURL, &params, &result)
 	if err != nil {
-		return
+		return 0, err
 	}
 
 	err = errors.New("Error to get travel time")
 
 	route := result.Response.Route
 	if len(route) == 0 {
-		return
+		return 0, err
 	}
 
-	travelTime = route[0].Summary.TravelTime
+	travelTime := route[0].Summary.TravelTime
 	if travelTime != 0 {
 		err = nil
 	}
 
-	return
+	return travelTime, err
 }
 
 type Place struct {

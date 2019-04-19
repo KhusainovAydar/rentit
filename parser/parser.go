@@ -2,21 +2,12 @@ package parser
 
 import "github.com/the-fusy/rentit/flat"
 
-type FlatsRequest struct {
-	City       uint8
-	Rooms      []uint8
-	MinPrice   uint64
-	MaxPrice   uint64
-	LastUpdate uint64
-	FromOwner  bool
-}
-
 type Parser interface {
-	getURL(req *FlatsRequest, page int) string
+	getURL(req *flat.FlatsRequest, page int) string
 	parsePage(url *string, flatsChan chan []flat.Flat)
 }
 
-func (request *FlatsRequest) GetFlats(parser Parser, maxPage int) []flat.Flat {
+func GetFlats(parser Parser, request *flat.FlatsRequest, maxPage int) []flat.Flat {
 	flatsChan := make(chan []flat.Flat)
 	flats := make([]flat.Flat, 0)
 	defer close(flatsChan)

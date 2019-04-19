@@ -18,10 +18,10 @@ func main() {
 	}
 
 	cianParser := &parser.ParserCian{}
-	flatsRequest := parser.FlatsRequest{
+	flatsRequest := flat.FlatsRequest{
 		City: flat.MOSCOW,
 	}
-	flats := flatsRequest.GetFlats(cianParser, 1)
+	flats := parser.GetFlats(cianParser, &flatsRequest, 1)
 
 	for i := range flats {
 		err := flats[i].FillCoordinates()

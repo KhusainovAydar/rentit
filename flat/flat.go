@@ -29,3 +29,12 @@ func (flat *Flat) FillCoordinates() error {
 	flat.Longitude = longitude
 	return nil
 }
+
+type FlatsRequest struct {
+	City       uint8
+	Rooms      []uint8
+	MinPrice   uint64
+	MaxPrice   uint64
+	LastUpdate uint64
+	FromOwner  bool
+}

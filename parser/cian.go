@@ -12,7 +12,7 @@ import (
 
 type ParserCian struct{}
 
-func (parser *ParserCian) getURL(req *FlatsRequest, page int) string {
+func (parser *ParserCian) getURL(req *flat.FlatsRequest, page int) string {
 	url := "https://www.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&type=4"
 	url += "&region=" + strconv.FormatUint(uint64(req.City), 10)
 	url += "&p=" + strconv.FormatInt(int64(page), 10)

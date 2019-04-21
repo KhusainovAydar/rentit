@@ -50,10 +50,12 @@ func (flat *Flat) GetTravelTime(latitude, longitude float64, result chan []inter
 }
 
 type FlatsRequest struct {
-	City       uint8
-	Rooms      []uint8
-	MinPrice   uint64
-	MaxPrice   uint64
-	LastUpdate uint64
-	FromOwner  bool
+	City                 uint8
+	Rooms                []uint8
+	MinPrice             uint64
+	MaxPrice             uint64
+	LastUpdate           uint64
+	FromOwner            bool
+	TravelTime           uint16
+	AddressWhereToTravel string
 }

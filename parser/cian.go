@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -34,17 +35,19 @@ func (parser *ParserCian) getURL(req *flat.FlatsRequest, page int) string {
 	return url
 }
 
-func (parser *ParserCian) parsePage(url *string, flatsChan chan []flat.Flat) {
+func (parser *ParserCian) parsePage(url *string, flatsChan chan []interface{}) {
 	resp, err := http.Get(*url)
-	flats := make([]flat.Flat, 0)
+	flats := make([]interface{}, 0)
 	defer func() { flatsChan <- flats }()
 
 	if err != nil {
+		flats = append(flats, err)
 		return
 	}
 	defer resp.Body.Close()
 	doc, err := goquery.NewDocumentFromResponse(resp)
 	if err != nil {
+		flats = append(flats, err)
 		return
 	}
 
@@ -76,6 +79,7 @@ func (parser *ParserCian) parsePage(url *string, flatsChan chan []flat.Flat) {
 			title = findAndFilter(".subtitle", "[^0-9 ]")
 			values = strings.Fields(title)
 			if len(values) < 2 {
+				flats = append(flats, errors.New("Bad flat"))
 				return
 			}
 		}

@@ -17,6 +17,7 @@ func GetFlats(parser Parser, request *flat.FlatsRequest, maxPage int) []flat.Fla
 	defer close(flatsChan)
 	for i := 1; i <= maxPage; i++ {
 		url := parser.getURL(request, i)
+		fmt.Println(url)
 		go parser.parsePage(&url, flatsChan)
 	}
 	for i := 1; i <= maxPage; i++ {

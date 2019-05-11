@@ -1,27 +1,30 @@
 from bs4 import BeautifulSoup
+import pymongo
+
+from settings import *
 
 import requests
 import json
 
+import logging
 
-YANDEX_URL = 'https://realty.yandex.ru/moskva/snyat/kvartira/studiya,1-komnatnie/?priceMax=70000&metroTransport=ON_FOOT&timeToMetro=15&priceMin=70000&includeTag=1794389&sort=DATE_DESC'
+
+YANDEX_URL = 'https://realty.yandex.ru/moskva/snyat/kvartira/studiya,1,2,3,4-i-bolee-komnatnie/?priceMax=200000&sort=DATE_DESC'
 
 HEADERS = {
     'User-Agent': 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 YaBrowser/18.11.1.716 Yowser/2.5 Safari/537.36',
-    'X-Ya-Front-Host': 'yandex.ru',
-    'Connection': 'keep-alive',
-    'Cache-Control': 'max-age=0',
-    'Upgrade-Insecure-Requests': '1',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Accept-Language': 'ru,en;q=0.9',
 }
 
 
-def parse_yandex(soup):
+def exists(db, data):
+    return len(list(db.get_collection(MONGO_DB).find(data))) == 0
+
+
+def parse_yandex(soup, db):
     """
-        returns list of flats metadata
+    returns list of flats metadata
     :param soup:
+    :param db:
     :return:
     """
     flats_block = str(soup.find('div', {'class', 'i-react-state i-bem'})['data-bem'])
@@ -29,43 +32,51 @@ def parse_yandex(soup):
 
     flats = json_block['i-react-state']['state']['search']['offers']['entities']
 
-    print(json.dumps(flats[1], indent=2))
-
-    data = []
     for flat in flats:
 
         current_data = {
             'url': f'http:{flat.get("unsignedInternalUrl", "shrug")}',
             'rooms': flat.get('roomsTotal', 0),
             'address': flat.get('location', {}).get('address', ""),
-            'lat': flat.get('location', {}).get('point', {}).get('latitude', 0),
-            'long': flat.get('location', {}).get('point', {}).get('longitude', 0),
+            'latitude': flat.get('location', {}).get('point', {}).get('latitude', 0),
+            'longitude': flat.get('location', {}).get('point', {}).get('longitude', 0),
             'price': flat.get('price', {}).get('value', 0),
             'area': flat.get('area', {}).get('value', 0),
-            'fee': flat.get('agentFee', None),
-            'prepayment': flat.get('prepayment', None),
+            'fee': int(flat.get('agentFee', 0) / 100 * flat.get('price', {}).get('value', 0)),
+            'prepayment': int(flat.get('prepayment', 0) / 100 * flat.get('price', {}).get('value', 0)),
             'images': flat.get('fullImages', []),
             'planImages': flat.get('extImages', {}).get('IMAGE_PLAN', {}).get('fullImages', []),
         }
 
-        current_data.update({
-            'fee': current_data['fee'] / 100 * flat.get('price', {}).get('value', 0) if current_data['fee'] else None,
-            'prepayment': current_data['prepayment'] / 100 * flat.get('price', {}).get('value', 0) if current_data['prepayment'] else None,
-        })
+        if current_data['url'] == 'shrug':
+            continue
+
+        for field in ('images', 'planImages'):
+            current_data[field] = [url[2:] for url in current_data[field]]
 
         for image in current_data['planImages']:
             current_data['images'].remove(image)
 
-        data.append(current_data)
-
-    return data
-
-
-def get_info(soup):
-    return parse_yandex(soup)
+        if exists(db, current_data):
+            db.get_collection(MONGO_DB).insert_one(current_data)
 
 
-state = requests.get(YANDEX_URL, headers=HEADERS)
-soup = BeautifulSoup(state.text.encode(state.encoding).decode('utf-8'), 'html.parser')
+def main():
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
-print(json.dumps(get_info(soup), indent=2, ensure_ascii=False))
+    logger.info('Connecting to MongoDB...')
+    db = pymongo.MongoClient(f'mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}/{MONGO_DB}?connectTimeoutMS={MONGO_TIMEOUT}')[MONGO_DB]
+
+    logger.info('Making a request...')
+    state = requests.get(YANDEX_URL, headers=HEADERS)
+    soup = BeautifulSoup(state.text.encode(state.encoding).decode('utf-8'), 'html.parser')
+
+    logger.info('Extracting flats from html...')
+    parse_yandex(soup, db)
+
+    logger.info('Successfully completed.')
+
+
+if __name__ == "__main__":
+    main()

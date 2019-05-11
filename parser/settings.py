@@ -1,0 +1,7 @@
+MONGO_DB = 'rentit'
+
+MONGO_USER = 'rentit'
+MONGO_PASS = 'kekos'
+
+MONGO_HOST = '159.65.201.121:27017'
+MONGO_TIMEOUT = 1488

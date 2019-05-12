@@ -2,26 +2,26 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"sync"
 
-	"github.com/the-fusy/rentit/config"
 	"github.com/the-fusy/rentit/flat"
+	"github.com/the-fusy/rentit/mongo"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
-	mongoURL := fmt.Sprintf("mongodb://%s:%s@%s/%s", config.MongoUser, config.MongoPassword, config.MongoHost, config.MongoDatabase)
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoURL))
+	err := mongo.InitDataBase()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	collection := client.Database(config.MongoDatabase).Collection("rentit")
+	flats, err := mongo.GetCollection("rentit")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	cur, err := collection.Find(context.TODO(), bson.D{
+	cur, err := flats.Find(context.TODO(), bson.D{
 		{"$or", bson.A{
 			bson.D{{"processed", false}},
 			bson.D{{"processed", bson.M{"$exists": false}}},
@@ -31,16 +31,18 @@ func main() {
 		log.Fatal(err)
 	}
 
+	var wg sync.WaitGroup
 	for cur.Next(context.TODO()) {
 		var flat flat.Flat
 		err = cur.Decode(&flat)
 		if err != nil {
 			log.Print(flat)
-			log.Fatal(err)
+			log.Print(err)
+			continue
 		}
-		collection.UpdateOne(context.TODO(), flat, bson.D{
-			{"$set", bson.D{{"processed", true}}},
-		})
+		wg.Add(1)
+		go flat.Process(&wg)
 	}
 	cur.Close(context.TODO())
+	wg.Wait()
 }

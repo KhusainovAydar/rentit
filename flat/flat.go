@@ -1,12 +1,16 @@
 package flat
 
 import (
+	"context"
 	"errors"
+	"log"
 	"sync"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/the-fusy/rentit/maps"
+	"github.com/the-fusy/rentit/mongo"
 )
 
 type Flat struct {
@@ -22,6 +26,20 @@ type Flat struct {
 	Prepayment uint64
 	Images     []string
 	PlanImages []string `bson:"planImages"`
+}
+
+func (flat *Flat) Process(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	flats, err := mongo.GetCollection("rentit")
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	flats.UpdateOne(context.TODO(), flat, bson.D{
+		{"$set", bson.D{{"processed", true}}},
+	})
 }
 
 func (flat *Flat) FillCoordinates(wg *sync.WaitGroup) error {

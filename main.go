@@ -1,37 +1,46 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 
-	"github.com/the-fusy/rentit/maps"
-
+	"github.com/the-fusy/rentit/config"
 	"github.com/the-fusy/rentit/flat"
-	"github.com/the-fusy/rentit/parser"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
-	address := "Москва Льва Толстого 16"
-	latitude, longitude, _ := maps.GetCoordinates(&address)
-
-	cianParser := &parser.ParserCian{}
-	flatsRequest := flat.FlatsRequest{
-		City: flat.MOSCOW,
+	mongoURL := fmt.Sprintf("mongodb://%s:%s@%s/%s", config.MongoUser, config.MongoPassword, config.MongoHost, config.MongoDatabase)
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoURL))
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	flats := parser.GetFlats(cianParser, &flatsRequest, 1)
-	results := make(chan []interface{})
+	collection := client.Database(config.MongoDatabase).Collection("rentit")
 
-	for i := range flats {
-		go flats[i].GetTravelTime(latitude, longitude, results)
+	cur, err := collection.Find(context.TODO(), bson.D{
+		{"$or", bson.A{
+			bson.D{{"processed", false}},
+			bson.D{{"processed", bson.M{"$exists": false}}},
+		}},
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	for range flats {
-		result := <-results
-		switch travelTime := result[1].(type) {
-		case error:
-			fmt.Println(travelTime.Error())
-		case int16:
-			fmt.Println(result[0].(*flat.Flat).URL, travelTime/60, "minutes")
+	for cur.Next(context.TODO()) {
+		var flat flat.Flat
+		err = cur.Decode(&flat)
+		if err != nil {
+			log.Print(flat)
+			log.Fatal(err)
 		}
+		collection.UpdateOne(context.TODO(), flat, bson.D{
+			{"$set", bson.D{{"processed", true}}},
+		})
 	}
+	cur.Close(context.TODO())
 }

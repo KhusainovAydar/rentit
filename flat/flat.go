@@ -4,23 +4,24 @@ import (
 	"errors"
 	"sync"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
 	"github.com/the-fusy/rentit/maps"
 )
 
-const (
-	MOSCOW uint8 = 1
-	SPB
-)
-
 type Flat struct {
-	URL       string
-	Rooms     uint8
-	Address   string
-	Latitude  float64
-	Longitude float64
-	Price     uint64
-	Area      uint64
-	FromOwner bool
+	ID         primitive.ObjectID `bson:"_id"`
+	URL        string
+	Rooms      uint8
+	Address    string
+	Latitude   float64
+	Longitude  float64
+	Price      uint64
+	Area       float64
+	Fee        uint64
+	Prepayment uint64
+	Images     []string
+	PlanImages []string `bson:"planImages"`
 }
 
 func (flat *Flat) FillCoordinates(wg *sync.WaitGroup) error {

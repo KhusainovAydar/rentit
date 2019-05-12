@@ -11,6 +11,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.golang
+    restart: always
 
   db:
     image: mongo:4
@@ -20,3 +21,4 @@ services:
     volumes:
       - /home/mongo/data:/data/db
       - /home/mongo/mongod.conf:/etc/mongod.conf
+    restart: always

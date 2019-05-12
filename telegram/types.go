@@ -11,8 +11,9 @@ type User struct {
 }
 
 type Chat struct {
-	ID   int32  `json:"id"`
-	Type string `json:"type"`
+	ID       int32  `json:"id"`
+	Type     string `json:"type"`
+	Username string `json:"username"`
 }
 
 type Update struct {
@@ -45,7 +46,11 @@ func (user *User) SendMessage(text string) (*Message, error) {
 }
 
 func (chat *Chat) GetChatID() string {
-	return strconv.FormatInt(int64(chat.ID), 10)
+	if chat.Username != "" {
+		return "@" + chat.Username
+	} else {
+		return strconv.FormatInt(int64(chat.ID), 10)
+	}
 }
 
 func (chat *Chat) SendMessage(text string) (*Message, error) {

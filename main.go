@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/the-fusy/rentit/flat"
 	"github.com/the-fusy/rentit/mongo"
@@ -21,28 +22,32 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cur, err := flats.Find(context.TODO(), bson.D{
-		{"$or", bson.A{
-			bson.D{{"processed", false}},
-			bson.D{{"processed", bson.M{"$exists": false}}},
-		}},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var wg sync.WaitGroup
-	for cur.Next(context.TODO()) {
-		var flat flat.Flat
-		err = cur.Decode(&flat)
+	for {
+		cur, err := flats.Find(context.TODO(), bson.D{
+			{"$or", bson.A{
+				bson.D{{"processed", false}},
+				bson.D{{"processed", bson.M{"$exists": false}}},
+			}},
+		})
 		if err != nil {
-			log.Print(flat)
-			log.Print(err)
-			continue
+			log.Fatal(err)
 		}
-		wg.Add(1)
-		go flat.Process(&wg)
+
+		var wg sync.WaitGroup
+		for cur.Next(context.TODO()) {
+			var flat flat.Flat
+			err = cur.Decode(&flat)
+			if err != nil {
+				log.Print(flat)
+				log.Print(err)
+				continue
+			}
+			wg.Add(1)
+			go flat.Process(&wg)
+		}
+		cur.Close(context.TODO())
+		wg.Wait()
+
+		time.Sleep(5 * time.Second)
 	}
-	cur.Close(context.TODO())
-	wg.Wait()
 }

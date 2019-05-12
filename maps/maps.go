@@ -90,7 +90,7 @@ type geocode struct {
 	}
 }
 
-func GetTravelTime(from, to Place) (int16, error) {
+func GetTravelTime(from, to Place) (uint16, error) {
 	hereURL := "https://route.api.here.com/routing/7.2/calculateroute.json"
 	params := url.Values{
 		"mode":           []string{"fastest;publicTransport"},
@@ -129,7 +129,7 @@ type calculateroute struct {
 	Response struct {
 		Route []struct {
 			Summary struct {
-				TravelTime int16
+				TravelTime uint16
 			}
 		}
 	}

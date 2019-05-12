@@ -34,6 +34,8 @@ type Flat struct {
 func (flat *Flat) Process(wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	log.Print("Start with flat ", flat.ID)
+
 	flats, err := mongo.GetCollection("rentit")
 	if err != nil {
 		log.Print(err)
@@ -58,7 +60,7 @@ func (flat *Flat) Process(wg *sync.WaitGroup) {
 
 	travelTime /= 60
 
-	if flat.Rooms >= 0 && flat.Rooms <= 4 && flat.Price <= 80000 {
+	if flat.Rooms >= 3 && flat.Rooms <= 4 && flat.Price <= 80000 {
 		pereezhaem := telegram.Chat{Username: "pereezhaem"}
 		pereezhaem.SendMessage(fmt.Sprintf("Ехать %v минут\n%v", travelTime, flat.URL))
 	}
@@ -69,6 +71,7 @@ func (flat *Flat) Process(wg *sync.WaitGroup) {
 		log.Print(err)
 		return
 	}
+
 }
 
 func (flat *Flat) FillCoordinates() error {

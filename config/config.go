@@ -1,6 +1,11 @@
 package config
 
 const (
-	HereAppID   = ""
-	HereAppCode = ""
+	HereAppID     = ""
+	HereAppCode   = ""
+	BotToken      = ""
+	MongoHost     = ""
+	MongoDatabase = ""
+	MongoUser     = ""
+	MongoPassword = ""
 )

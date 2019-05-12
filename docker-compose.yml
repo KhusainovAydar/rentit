@@ -1,0 +1,27 @@
+version: "3.7"
+
+services:
+  rentit-python:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    restart: always
+    depends_on:
+      - db
+
+  rentit-golang:
+    build:
+      context: .
+      dockerfile: Dockerfile.golang
+    restart: always
+    depends_on:
+      - db
+  db:
+    image: mongo:4
+    command: mongod --config /etc/mongod.conf
+    ports:
+      - "27017:27017"
+    volumes:
+      - /data/db:/data/db
+      - ./config/mongod.conf:/etc/mongod.conf
+    restart: always

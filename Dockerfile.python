@@ -1,0 +1,9 @@
+FROM python:3.6
+
+WORKDIR /src
+
+RUN pip install --no-cache-dir pymongo requests beautifulsoup4
+
+COPY . .
+
+CMD [ "python", "parser/helper.py" ]

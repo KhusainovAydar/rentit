@@ -1,44 +1,53 @@
 package main
 
 import (
-	"fmt"
-
-	"github.com/the-fusy/rentit/maps"
-	"github.com/the-fusy/rentit/telegram"
+	"context"
+	"log"
+	"sync"
+	"time"
 
 	"github.com/the-fusy/rentit/flat"
-	"github.com/the-fusy/rentit/parser"
+	"github.com/the-fusy/rentit/mongo"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func main() {
-	address := "Москва Льва Толстого 16"
-	latitude, longitude, _ := maps.GetCoordinates(&address)
-	telegramUser := telegram.User{ID: 12345}
-
-	cianParser := &parser.ParserCian{}
-	flatsRequest := flat.FlatsRequest{
-		City:     flat.MOSCOW,
-		MaxPrice: 120000,
-		Rooms:    []uint8{5},
+	err := mongo.InitDataBase()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	flats := parser.GetFlats(cianParser, &flatsRequest, 10)
-	results := make(chan []interface{})
-
-	for i := range flats {
-		go flats[i].GetTravelTime(latitude, longitude, results)
+	flats, err := mongo.GetCollection("rentit")
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	for range flats {
-		result := <-results
-		switch travelTime := result[1].(type) {
-		case error:
-			fmt.Println(travelTime.Error())
-		case int16:
-			minutes := travelTime / 60
-			if minutes <= 30 {
-				telegramUser.SendMessage(fmt.Sprintf("%v %v minutes", result[0].(*flat.Flat).URL, minutes))
-			}
+	for {
+		cur, err := flats.Find(context.TODO(), bson.D{
+			{"$or", bson.A{
+				bson.D{{"processed", false}},
+				bson.D{{"processed", bson.M{"$exists": false}}},
+			}},
+		})
+		if err != nil {
+			log.Fatal(err)
 		}
+
+		var wg sync.WaitGroup
+		for cur.Next(context.TODO()) {
+			var flat flat.Flat
+			err = cur.Decode(&flat)
+			if err != nil {
+				log.Print(flat)
+				log.Print(err)
+				continue
+			}
+			wg.Add(1)
+			go flat.Process(&wg)
+		}
+		cur.Close(context.TODO())
+		wg.Wait()
+
+		time.Sleep(5 * time.Second)
 	}
 }

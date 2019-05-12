@@ -1,30 +1,77 @@
 package flat
 
 import (
-	"errors"
+	"context"
+	"fmt"
+	"log"
 	"sync"
 
-	"github.com/the-fusy/rentit/maps"
-)
+	"github.com/the-fusy/rentit/telegram"
 
-const (
-	MOSCOW uint8 = 1
-	SPB
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/the-fusy/rentit/maps"
+	"github.com/the-fusy/rentit/mongo"
 )
 
 type Flat struct {
-	URL       string
-	Rooms     uint8
-	Address   string
-	Latitude  float64
-	Longitude float64
-	Price     uint64
-	Area      uint64
-	FromOwner bool
+	ID         primitive.ObjectID `bson:"_id"`
+	URL        string
+	Rooms      uint8
+	Address    string
+	Latitude   float64
+	Longitude  float64
+	Price      uint64
+	Area       float64
+	Fee        uint64
+	Prepayment uint64
+	Images     []string
+	PlanImages []string `bson:"planImages"`
+	Processed  bool
 }
 
-func (flat *Flat) FillCoordinates(wg *sync.WaitGroup) error {
+func (flat *Flat) Process(wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	flats, err := mongo.GetCollection("rentit")
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	if flat.Latitude == 0 || flat.Longitude == 0 {
+		err = flat.FillCoordinates()
+		if err != nil {
+			log.Print(err)
+			return
+		}
+	}
+
+	address := "Москва Льва Толстого 16"
+	latitude, longitude, _ := maps.GetCoordinates(&address)
+	travelTime, err := flat.GetTravelTime(latitude, longitude)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	travelTime /= 60
+
+	if flat.Rooms >= 0 && flat.Rooms <= 4 && flat.Price <= 80000 {
+		pereezhaem := telegram.Chat{Username: "pereezhaem"}
+		pereezhaem.SendMessage(fmt.Sprintf("Ехать %v минут\n%v", travelTime, flat.URL))
+	}
+
+	flat.Processed = true
+	_, err = flats.ReplaceOne(context.TODO(), bson.D{{"_id", flat.ID}}, flat)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+}
+
+func (flat *Flat) FillCoordinates() error {
 	latitude, longitude, err := maps.GetCoordinates(&flat.Address)
 	if err != nil {
 		return err
@@ -34,19 +81,14 @@ func (flat *Flat) FillCoordinates(wg *sync.WaitGroup) error {
 	return nil
 }
 
-func (flat *Flat) GetTravelTime(latitude, longitude float64, result chan []interface{}) error {
-	data := []interface{}{flat, errors.New("Error to get travel time")}
-	defer func() { result <- data }()
-
+func (flat *Flat) GetTravelTime(latitude, longitude float64) (uint16, error) {
 	from := maps.Place{Latitude: flat.Latitude, Longitude: flat.Longitude}
 	to := maps.Place{Latitude: latitude, Longitude: longitude}
 	travelTime, err := maps.GetTravelTime(from, to)
 	if err != nil {
-		return err
+		return 0, err
 	}
-
-	data[1] = travelTime
-	return nil
+	return travelTime, nil
 }
 
 type FlatsRequest struct {

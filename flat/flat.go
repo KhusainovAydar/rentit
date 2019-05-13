@@ -2,8 +2,8 @@ package flat
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"strconv"
 	"sync"
 
 	"github.com/the-fusy/rentit/telegram"
@@ -34,7 +34,7 @@ type Flat struct {
 func (flat *Flat) Process(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	log.Print("Start with flat ", flat.ID)
+	log.Print("Processing with flat ", flat.ID)
 
 	flats, err := mongo.GetCollection("rentit")
 	if err != nil {
@@ -60,9 +60,11 @@ func (flat *Flat) Process(wg *sync.WaitGroup) {
 
 	travelTime /= 60
 
-	if flat.Rooms >= 3 && flat.Rooms <= 4 && flat.Price <= 80000 {
+	if flat.Rooms >= 3 && flat.Rooms <= 4 && flat.Price <= 80000 && travelTime <= 50 {
 		pereezhaem := telegram.Chat{Username: "pereezhaem"}
-		pereezhaem.SendMessage(fmt.Sprintf("Ехать %v минут\n%v", travelTime, flat.URL))
+		_, err = telegram.SendMessage(&pereezhaem, flat.GetDescription(travelTime), false, false)
+		images := append(flat.PlanImages, flat.Images...)
+		_, err = telegram.SendPhotos(&pereezhaem, &images)
 	}
 
 	flat.Processed = true
@@ -72,6 +74,58 @@ func (flat *Flat) Process(wg *sync.WaitGroup) {
 		return
 	}
 
+}
+
+func (flat *Flat) GetDescription(travelTime uint16) *string {
+	var text string
+
+	if flat.Rooms == 0 {
+		text += "Студия"
+	} else {
+		text += strconv.FormatUint(uint64(flat.Rooms), 10) + " "
+		switch flat.Rooms % 10 {
+		case 1:
+			text += "комната"
+		case 2, 3, 4:
+			text += "комнаты"
+		default:
+			text += "комнат"
+		}
+	}
+	text += "\n"
+
+	text += "Стоит " + strconv.FormatUint(uint64(flat.Price), 10) + "\n"
+
+	if flat.Prepayment == 0 {
+		text += "Без залога"
+	} else {
+		text += "Залог " + strconv.FormatUint(uint64(flat.Prepayment), 10)
+	}
+	text += "\n"
+
+	if flat.Fee == 0 {
+		text += "Без комиссии"
+	} else {
+		text += "Комиссия " + strconv.FormatUint(uint64(flat.Fee), 10)
+	}
+	text += "\n"
+
+	text += "Ехать до офиса " + strconv.FormatUint(uint64(travelTime), 10) + " "
+	switch travelTime % 10 {
+	case 1:
+		text += "минуту"
+	case 2, 3, 4:
+		text += "минуты"
+	default:
+		text += "минут"
+	}
+	text += "\n"
+
+	text += flat.URL + "\n"
+
+	text += "Фоточки ⬇️"
+
+	return &text
 }
 
 func (flat *Flat) FillCoordinates() error {

@@ -63,9 +63,9 @@ func (flat *Flat) Process(wg *sync.WaitGroup) {
 	if flat.Rooms >= 3 && flat.Rooms <= 4 && flat.Price <= 80000 {
 		pereezhaem := telegram.Chat{Username: "pereezhaem"}
 		text := fmt.Sprintf("nЕхать %v минут\n%v", travelTime, flat.URL)
-		_, err = pereezhaem.SendMessage(text, false, false)
+		_, err = telegram.SendMessage(&pereezhaem, &text, false, false)
 		if len(flat.Images) > 1 {
-			_, err = pereezhaem.SendPhotos(&flat.Images)
+			_, err = telegram.SendPhotos(&pereezhaem, &flat.Images)
 		}
 	}
 

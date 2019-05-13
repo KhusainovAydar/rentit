@@ -58,7 +58,7 @@ func GetUpdates() (*[]Update, error) {
 	return &updates, nil
 }
 
-func sendMessage(chat Replyable, text *string, pagePreview, notifications bool) (*Message, error) {
+func SendMessage(chat Replyable, text *string, pagePreview, notifications bool) (*Message, error) {
 	sendMessage := method("sendMessage")
 	data := struct {
 		ChatID                string `json:"chat_id"`
@@ -73,7 +73,7 @@ func sendMessage(chat Replyable, text *string, pagePreview, notifications bool) 
 	return &message, nil
 }
 
-func sendPhotos(chat Replyable, photos *[]string) (*Message, error) {
+func SendPhotos(chat Replyable, photos *[]string) (*Message, error) {
 	sendPhotos := method("sendMediaGroup")
 	type mediaStruct struct {
 		Type    string `json:"type"`

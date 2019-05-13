@@ -1,7 +1,11 @@
-MONGO_DB = 'rentit'
+import os
 
-MONGO_USER = 'rentit'
-MONGO_PASS = 'kekos'
 
-MONGO_HOST = '159.65.201.121:27017'
+MONGO_DB = os.getenv('MONGO_DB')
+MONGO_FLATS = 'rentit'
+
+MONGO_USER = os.getenv('MONGO_USER')
+MONGO_PASS = os.getenv('MONGO_PASS')
+
+MONGO_HOST = os.getenv('MONGO_HOST')
 MONGO_TIMEOUT = 1488

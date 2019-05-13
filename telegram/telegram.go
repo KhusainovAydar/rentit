@@ -58,14 +58,41 @@ func GetUpdates() (*[]Update, error) {
 	return &updates, nil
 }
 
-func sendMessage(chat Replyable, text *string) (*Message, error) {
+func sendMessage(chat Replyable, text *string, pagePreview, notifications bool) (*Message, error) {
 	sendMessage := method("sendMessage")
 	data := struct {
-		ChatID string `json:"chat_id"`
-		Text   string `json:"text"`
-	}{chat.GetChatID(), *text}
+		ChatID                string `json:"chat_id"`
+		Text                  string `json:"text"`
+		DisableWebPagePreview bool   `json:"disable_web_page_preview"`
+		DisableNotifications  bool   `json:"disable_notification"`
+	}{chat.GetChatID(), *text, !pagePreview, !notifications}
 	message := Message{}
 	if err := sendMessage.execute(&data, &message); err != nil {
+		return nil, err
+	}
+	return &message, nil
+}
+
+func sendPhotos(chat Replyable, photos *[]string) (*Message, error) {
+	sendPhotos := method("sendMediaGroup")
+	type mediaStruct struct {
+		Type    string `json:"type"`
+		Media   string `json:"media"`
+		Caption string `json:"caption"`
+	}
+	medias := make([]mediaStruct, 0)
+	for i := range *photos {
+		if i == 10 {
+			break
+		}
+		medias = append(medias, mediaStruct{"photo", (*photos)[i], "KEKOS"})
+	}
+	data := struct {
+		ChatID string        `json:"chat_id"`
+		Media  []mediaStruct `json:"media"`
+	}{chat.GetChatID(), medias}
+	message := Message{}
+	if err := sendPhotos.execute(&data, &message); err != nil {
 		return nil, err
 	}
 	return &message, nil

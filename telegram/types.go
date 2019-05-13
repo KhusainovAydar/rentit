@@ -22,23 +22,34 @@ type Update struct {
 }
 
 type Message struct {
-	MessageID int32  `json:"message_id"`
-	Text      string `json:"text"`
-	From      User   `json:"from"`
-	Chat      Chat   `json:"chat"`
+	MessageID             int32  `json:"message_id"`
+	Text                  string `json:"text"`
+	From                  User   `json:"from"`
+	Chat                  Chat   `json:"chat"`
+	DisableWebPagePreview bool   `json:"disable_web_page_preview"`
+	DisableNotifications  bool   `json:"disable_notification"`
 }
 
 type Replyable interface {
 	GetChatID() string
-	SendMessage(text string) (*Message, error)
+	SendMessage(text string, pagePreview, notifications bool) (*Message, error)
+	SendPhotos(photos *[]string) (*Message, error)
 }
 
 func (user *User) GetChatID() string {
 	return strconv.FormatInt(int64(user.ID), 10)
 }
 
-func (user *User) SendMessage(text string) (*Message, error) {
-	message, err := sendMessage(user, &text)
+func (user *User) SendMessage(text string, pagePreview, notifications bool) (*Message, error) {
+	message, err := sendMessage(user, &text, pagePreview, notifications)
+	if err != nil {
+		return nil, err
+	}
+	return message, nil
+}
+
+func (user *User) SendPhotos(photos *[]string) (*Message, error) {
+	message, err := sendPhotos(user, photos)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +64,16 @@ func (chat *Chat) GetChatID() string {
 	}
 }
 
-func (chat *Chat) SendMessage(text string) (*Message, error) {
-	message, err := sendMessage(chat, &text)
+func (chat *Chat) SendMessage(text string, pagePreview, notifications bool) (*Message, error) {
+	message, err := sendMessage(chat, &text, pagePreview, notifications)
+	if err != nil {
+		return nil, err
+	}
+	return message, nil
+}
+
+func (chat *Chat) SendPhotos(photos *[]string) (*Message, error) {
+	message, err := sendPhotos(chat, photos)
 	if err != nil {
 		return nil, err
 	}

@@ -93,10 +93,11 @@ type geocode struct {
 func GetTravelTime(from, to Place) (uint16, error) {
 	hereURL := "https://route.api.here.com/routing/7.2/calculateroute.json"
 	params := url.Values{
-		"mode":           []string{"fastest;publicTransport"},
+		"mode":           []string{"fastest;publicTransportTimeTable"},
 		"representation": []string{"overview"},
 		"waypoint0":      []string{fmt.Sprintf("geo!%v,%v", from.Latitude, from.Longitude)},
 		"waypoint1":      []string{fmt.Sprintf("geo!%v,%v", to.Latitude, to.Longitude)},
+		"arrival":        []string{"2019-05-13T08:00:00Z"},
 	}
 	result := calculateroute{}
 

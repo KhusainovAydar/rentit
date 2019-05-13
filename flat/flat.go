@@ -58,12 +58,14 @@ func (flat *Flat) Process(wg *sync.WaitGroup) {
 		return
 	}
 
-	// if flat.Rooms >= 3 && flat.Rooms <= 4 && flat.Price <= 80000 {
-	pereezhaem := telegram.Chat{Username: "pereezhaem_test"}
-	_, err = telegram.SendMessage(&pereezhaem, flat.GetDescription(int(travelTime/60)), false, false)
-	images := append(flat.PlanImages, flat.Images...)
-	_, err = telegram.SendPhotos(&pereezhaem, &images)
-	// }
+	travelTime /= 60
+
+	if flat.Rooms >= 3 && flat.Rooms <= 4 && flat.Price <= 80000 && travelTime <= 50 {
+		pereezhaem := telegram.Chat{Username: "pereezhaem"}
+		_, err = telegram.SendMessage(&pereezhaem, flat.GetDescription(travelTime), false, false)
+		images := append(flat.PlanImages, flat.Images...)
+		_, err = telegram.SendPhotos(&pereezhaem, &images)
+	}
 
 	flat.Processed = true
 	_, err = flats.ReplaceOne(context.TODO(), bson.D{{"_id", flat.ID}}, flat)
@@ -74,7 +76,7 @@ func (flat *Flat) Process(wg *sync.WaitGroup) {
 
 }
 
-func (flat *Flat) GetDescription(travelTime int) *string {
+func (flat *Flat) GetDescription(travelTime uint16) *string {
 	var text string
 
 	if flat.Rooms == 0 {
@@ -101,7 +103,7 @@ func (flat *Flat) GetDescription(travelTime int) *string {
 	}
 	text += "\n"
 
-	if flat.Prepayment == 0 {
+	if flat.Fee == 0 {
 		text += "Без комиссии"
 	} else {
 		text += "Комиссия " + strconv.FormatUint(uint64(flat.Fee), 10)
@@ -118,6 +120,8 @@ func (flat *Flat) GetDescription(travelTime int) *string {
 		text += "минут"
 	}
 	text += "\n"
+
+	text += flat.URL + "\n"
 
 	text += "Фоточки ⬇️"
 

@@ -3,6 +3,7 @@ package telegram
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -73,8 +74,27 @@ func SendMessage(chat Replyable, text *string, pagePreview, notifications bool) 
 	return &message, nil
 }
 
+func SendPhoto(chat Replyable, photo *string) (*Message, error) {
+	sendPhoto := method("sendPhoto")
+	data := struct {
+		ChatID string `json:"chat_id"`
+		Photo  string `json:"photo"`
+	}{chat.GetChatID(), *photo}
+	message := Message{}
+	if err := sendPhoto.execute(&data, &message); err != nil {
+		return nil, err
+	}
+	return &message, nil
+}
+
 func SendPhotos(chat Replyable, photos *[]string) (*Message, error) {
-	sendPhotos := method("sendMediaGroup")
+	switch len(*photos) {
+	case 0:
+		return nil, errors.New("there are no photos to send")
+	case 1:
+		return SendPhoto(chat, &(*photos)[0])
+	}
+
 	type mediaStruct struct {
 		Type    string `json:"type"`
 		Media   string `json:"media"`
@@ -85,8 +105,10 @@ func SendPhotos(chat Replyable, photos *[]string) (*Message, error) {
 		if i == 10 {
 			break
 		}
-		medias = append(medias, mediaStruct{"photo", (*photos)[i], "KEKOS"})
+		medias = append(medias, mediaStruct{"photo", (*photos)[i], "Тут может быть ваша реклама"})
 	}
+
+	sendPhotos := method("sendMediaGroup")
 	data := struct {
 		ChatID string        `json:"chat_id"`
 		Media  []mediaStruct `json:"media"`

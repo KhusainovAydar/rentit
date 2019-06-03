@@ -98,8 +98,10 @@ class Parser:
             for image in current_data['planImages']:
                 current_data['images'].remove(image)
 
-            if not self.db.exists({'url': current_data['url']}):
+            if self.db.exists({'url': current_data['url']}):
                 update_or_do_nothing(current_data)
+            else:
+                self.db.collection.insert_one(current_data)
 
 
 def configure_settings(db):

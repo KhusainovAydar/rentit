@@ -1,4 +1,4 @@
-version: "3.7"
+version: "3"
 
 services:
   rentit-python:
@@ -6,9 +6,19 @@ services:
       context: .
       dockerfile: Dockerfile.python
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "10"
 
   rentit-golang:
     build:
       context: .
       dockerfile: Dockerfile.golang
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+       max-size: "1m"
+       max-file: "10"

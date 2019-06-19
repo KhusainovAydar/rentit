@@ -48,7 +48,7 @@ class Parser:
                 updated_fields.update({key: data[value]})
 
         if len(updated_fields) != 0:
-            document['updated_fields'].append(updated_fields)
+            document['updated_fields'].append(list(updated_fields))
             updated_fields['updated_fields'] = document['updated_fields']
             updated_fields['updated_at'] = data['updated_at']
 
@@ -99,9 +99,9 @@ class Parser:
                 current_data['images'].remove(image)
 
             if self.db.exists({'url': current_data['url']}):
-                update_or_do_nothing(current_data)
+                self.update_or_do_nothing(current_data)
             else:
-                self.db.collection.insert_one(current_data)
+                self.db.collection(MONGO_FLATS).insert_one(current_data)
 
 
 def configure_settings(db):
@@ -140,8 +140,8 @@ def main():
         # get random headers & proxy for request
         session, cookie = random.choice(SESSIONS)
         user_agent = random.choice(USER_AGENTS)
-        proxy = PROXIES[proxy_id]
-        proxy_id = (proxy_id + 1) % len(PROXIES)
+        proxy = PROXIES[proxy_id] if PROXIES else None
+        proxy_id = ((proxy_id + 1) % len(PROXIES)) if PROXIES else None
         referer = random.choice(REFERERS)
 
         # add headers
@@ -156,7 +156,7 @@ def main():
 
         try:
             # create request
-            state = session.get(YANDEX_URL, headers=HEADERS, proxies={'https': proxy}, timeout=7)
+            state = session.get(YANDEX_URL, headers=HEADERS, proxies={'https': proxy} if proxy else None, timeout=7)
 
             # create soup for the caught state
             soup = BeautifulSoup(state.text.encode(state.encoding).decode('utf-8'), 'html.parser')

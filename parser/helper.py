@@ -12,6 +12,9 @@ import time
 import random
 import logging
 
+# configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 YANDEX_URL = 'https://realty.yandex.ru/moskva/snyat/kvartira/studiya,1,2,3,4-i-bolee-komnatnie/?priceMax=200000&sort=DATE_DESC'
 
@@ -45,9 +48,11 @@ class Parser:
                 continue
 
             if value != data[key]:
-                updated_fields.update({key: data[value]})
+                updated_fields[key] = data[key]
 
-        if len(updated_fields) != 0:
+        if updated_fields:
+            if 'updated_fields' not in document:
+                document['updated_fields'] = []
             document['updated_fields'].append(list(updated_fields))
             updated_fields['updated_fields'] = document['updated_fields']
             updated_fields['updated_at'] = data['updated_at']
@@ -122,10 +127,6 @@ def configure_settings(db):
 
 
 def main():
-    # configure logger
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
-
     # connect to db
     logger.info('Connecting to MongoDB...')
     parser = Parser(MongoDB())
